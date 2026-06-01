@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Würfelmeister – 3D Zauberwürfel</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0d0d1a; overflow: hidden; font-family: system-ui, sans-serif;
+           -webkit-user-select: none; user-select: none; }
+    canvas { display: block; }
+
+    #picker {
+      display: none; position: fixed; z-index: 20;
+      background: rgba(8,8,22,.97); border: 1px solid #334;
+      border-radius: 10px; padding: 10px; flex-wrap: wrap; gap: 8px;
+      width: 158px; box-shadow: 0 8px 32px rgba(0,0,0,.75);
+    }
+    #picker.show { display: flex; }
+    .cbtn {
+      width: 42px; height: 42px; border: 2px solid transparent;
+      border-radius: 6px; cursor: pointer; outline: none;
+      transition: transform .1s, border-color .1s;
+    }
+    .cbtn:hover:not(:disabled) { transform: scale(1.13); border-color: #fff; }
+    .cbtn:disabled { opacity: .15; cursor: default; }
+    .cbtn.clear { background: transparent !important; border: 2px dashed #555;
+                  color: #666; font-size: 20px; line-height: 42px; text-align: center; }
+
+    #tip {
+      position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.28); font-size: 11px; letter-spacing: .04em;
+      pointer-events: none; transition: opacity 1.2s; white-space: nowrap;
+    }
+    #zugfolge {
+      position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%);
+      color: rgba(180,210,255,.55); font-size: 12px; font-family: monospace;
+      letter-spacing: .06em; pointer-events: none; white-space: nowrap;
+      max-width: 92vw; overflow: hidden; text-overflow: ellipsis;
+    }
+    #title {
+      position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,.18); font-size: 13px; letter-spacing: .15em;
+      text-transform: uppercase; pointer-events: none;
+    }
+
+    /* ── Undo / Redo ── */
+    #hist {
+      position: fixed; bottom: 28px; right: 28px;
+      display: flex; gap: 10px; z-index: 10;
+    }
+    .hbtn {
+      width: 46px; height: 46px; border-radius: 50%;
+      background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.20);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .15s; outline: none;
+    }
+    .hbtn:hover:not(:disabled) { background: rgba(255,255,255,.22); }
+    .hbtn:disabled { opacity: .25; cursor: default; }
+    .hbtn svg { width: 22px; height: 22px; fill: #ccd; }
+
+    /* ── Icon-Leiste rechts oben ── */
+    #icon-bar {
+      position: fixed; top: 14px; right: 16px;
+      display: flex; flex-direction: column; gap: 7px; z-index: 50;
+    }
+    .icon-btn {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.18);
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background .15s, border-color .15s; outline: none;
+    }
+    .icon-btn:hover { background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.35); }
+    #img-geloest-icon:hover { opacity: 1; border-color: rgba(255,255,255,.45); }
+    .icon-btn svg { width: 20px; height: 20px; fill: #b8c8e8; }
+
+    /* ── Zettel (schwebende Panels) ── */
+    .zettel {
+      display: none; flex-direction: column;
+      position: fixed; z-index: 30;
+      background: rgba(8,8,22,.97); border: 1px solid #2e3a55;
+      border-radius: 10px; box-shadow: 0 10px 36px rgba(0,0,0,.80);
+      min-width: 200px; min-height: 140px;
+      overflow: hidden;
+    }
+    .zettel.show { display: flex; }
+
+    .zettel-grip {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 10px 8px 12px;
+      background: rgba(255,255,255,.055); border-bottom: 1px solid #2a3348;
+      border-radius: 10px 10px 0 0;
+      cursor: move; user-select: none;
+      font-size: 11px; letter-spacing: .07em;
+      color: rgba(200,215,240,.65);
+    }
+    .zettel-grip svg { width: 13px; height: 13px; fill: rgba(200,215,240,.45); flex-shrink: 0; margin-left: auto; }
+
+    .zettel-close {
+      padding: 0 3px;
+      background: transparent; border: none;
+      color: rgba(200,215,240,.35); font-size: 15px; line-height: 1;
+      cursor: pointer; border-radius: 4px;
+      transition: color .1s, background .1s;
+    }
+    .zettel-close:hover { color: rgba(255,255,255,.85); background: rgba(255,255,255,.10); }
+
+    .zettel-body {
+      flex: 1; overflow-y: auto; padding: 10px 12px 20px;
+      scrollbar-width: thin; scrollbar-color: #2a3348 transparent;
+    }
+
+    .zettel-resize {
+      position: absolute; bottom: 0; right: 0;
+      width: 18px; height: 18px; cursor: se-resize;
+      border-radius: 0 0 10px 0;
+      background:
+        linear-gradient(135deg, transparent 30%, rgba(160,180,220,.30) 30%, rgba(160,180,220,.30) 42%, transparent 42%),
+        linear-gradient(135deg, transparent 52%, rgba(160,180,220,.30) 52%, rgba(160,180,220,.30) 64%, transparent 64%),
+        linear-gradient(135deg, transparent 74%, rgba(160,180,220,.30) 74%, rgba(160,180,220,.30) 86%, transparent 86%);
+    }
+
+    /* ── Positionierung der Zettel ── */
+    #zettel-tools   { top: 100px; right: 16px; width: 218px; }
+    #zettel-help    { top: 110px; right: 28px; width: 270px; }
+    #zettel-uebung  { top: 105px; right: 20px; width: 232px; }
+    #zettel-ansicht { top: 108px; right: 18px; width: 210px; }
+
+    /* ── Werkzeuge-Inhalt ── */
+    .zettel-section {
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(160,185,230,.40); margin: 8px 0 5px;
+    }
+    .zettel-section:first-child { margin-top: 0; }
+
+    .move-table {
+      border-collapse: separate; border-spacing: 2px 2px;
+      width: 100%; margin-bottom: 2px;
+    }
+    .move-table th {
+      font-size: 10px; font-weight: 400;
+      color: rgba(160,185,230,.40); text-align: center; padding: 2px 1px 4px;
+    }
+    .move-table td:first-child {
+      font-size: 10px; color: rgba(160,185,230,.45);
+      padding-right: 3px; text-align: right; width: 22px;
+    }
+    .move-table button {
+      width: 100%; padding: 4px 0;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 4px; color: #c0d0ec; font-size: 11px; font-family: monospace;
+      cursor: pointer; transition: background .1s;
+    }
+    .move-table button:hover { background: rgba(100,160,255,.22); border-color: rgba(100,160,255,.40); }
+
+    .action-btn {
+      display: flex; align-items: center; gap: 6px;
+      width: 100%; margin: 3px 0; padding: 6px 9px;
+      background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12);
+      border-radius: 6px; color: #c0d0ec; font-size: 12px;
+      cursor: pointer; text-align: left; transition: background .1s;
+    }
+    .action-btn:hover { background: rgba(100,160,255,.20); border-color: rgba(100,160,255,.38); }
+    .action-btn svg { width: 14px; height: 14px; fill: rgba(160,185,230,.60); flex-shrink: 0; }
+
+    /* ── Erläuterungen-Inhalt ── */
+    .help-section {
+      font-size: 9px; letter-spacing: .12em; text-transform: uppercase;
+      color: rgba(160,185,230,.40); margin: 10px 0 5px;
+    }
+    .help-section:first-child { margin-top: 0; }
+
+    .help-dl {
+      display: grid; grid-template-columns: auto 1fr;
+      gap: 3px 10px; font-size: 11px;
+    }
+    .help-dl dt {
+      color: rgba(160,185,230,.65); font-family: monospace;
+      white-space: nowrap; padding: 1px 0;
+    }
+    .help-dl dd { color: rgba(200,215,240,.80); padding: 1px 0; }
+
+    .color-legend {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 3px 10px; font-size: 11px; margin-top: 2px;
+    }
+    .color-legend span { color: rgba(200,215,240,.80); display: flex; align-items: center; gap: 5px; }
+    .color-swatch {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 2px; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div id="picker"></div>
+<div id="title">Würfelmeister</div>
+<div id="zugfolge"></div>
+<div id="tip">Drehen: Maus &nbsp;·&nbsp; Kachel: Klick &nbsp;·&nbsp; Mitte 1×=Ein/Aus &nbsp;·&nbsp; 2×=Mischen &nbsp;·&nbsp; 3×=Gelöst</div>
+
+<!-- Undo / Redo -->
+<div id="hist">
+  <button class="hbtn" id="undo-btn" title="Zurück  Strg+Z" disabled>
+    <svg viewBox="0 0 24 24"><path d="M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62
+      C8.77 11.22 10.54 10.5 12.5 10.5c3.54 0 6.55 2.31 7.6 5.5l2.37-.78
+      C21.08 11.03 17.15 8 12.5 8z"/></svg>
+  </button>
+  <button class="hbtn" id="redo-btn" title="Erneut  Strg+Y" disabled>
+    <svg viewBox="0 0 24 24"><path d="M18.4 10.6C16.55 8.99 14.15 8 11.5 8
+      c-4.65 0-8.58 3.03-9.96 7.22L3.9 16c1.05-3.19 4.05-5.5 7.6-5.5
+      1.95 0 3.73.72 5.12 1.88L13 16h9V7l-3.6 3.6z"/></svg>
+  </button>
+</div>
+
+<!-- Icon-Leiste rechts oben -->
+<div id="icon-bar">
+  <button class="icon-btn" id="icon-tools" title="Werkzeuge">
+    <svg viewBox="0 0 24 24">
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9
+               1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1
+               c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+    </svg>
+  </button>
+  <img id="img-geloest-icon" src="Bilder/Rubik3x3x3.jpg"
+       title="Gelöst einfärben" alt="Gelöst"
+       style="width:38px;height:38px;object-fit:cover;border-radius:8px;cursor:pointer;
+              opacity:.72;border:1px solid rgba(255,255,255,.18);transition:opacity .15s;">
+  <button class="icon-btn" id="icon-ansicht" title="Ansicht">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11
+               11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5
+               5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3
+               3-1.34 3-3-1.34-3-3-3z"/>
+    </svg>
+  </button>
+  <button class="icon-btn" id="icon-uebung" title="Übungen" style="font-size:17px;font-weight:700;letter-spacing:0;color:#b8c8e8;">Ü</button>
+  <button class="icon-btn" id="icon-help" title="Erläuterungen">
+    <svg viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1
+               17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5
+               c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41
+               0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4
+               c0 .88-.36 1.68-.93 2.25z"/>
+    </svg>
+  </button>
+</div>
+
+<!-- Werkzeuge-Zettel -->
+<div class="zettel" id="zettel-tools">
+  <div class="zettel-grip">
+    <button class="zettel-close" title="Schließen">✕</button>
+    Werkzeuge
+    <svg viewBox="0 0 24 24">
+      <path d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9
+               1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1
+               c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z"/>
+    </svg>
+  </div>
+  <div class="zettel-body">
+    <div class="zettel-section">Züge</div>
+    <table class="move-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th title="Im Uhrzeigersinn">↻</th>
+          <th title="Gegen Uhrzeigersinn">↺</th>
+          <th title="180°">½+½</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>U</td>
+          <td><button data-move="U">U</button></td>
+          <td><button data-move="U'">U'</button></td>
+          <td><button data-move="U2">U2</button></td>
+        </tr>
+        <tr>
+          <td>D</td>
+          <td><button data-move="D">D</button></td>
+          <td><button data-move="D'">D'</button></td>
+          <td><button data-move="D2">D2</button></td>
+        </tr>
+        <tr>
+          <td>R</td>
+          <td><button data-move="R">R</button></td>
+          <td><button data-move="R'">R'</button></td>
+          <td><button data-move="R2">R2</button></td>
+        </tr>
+        <tr>
+          <td>L</td>
+          <td><button data-move="L">L</button></td>
+          <td><button data-move="L'">L'</button></td>
+          <td><button data-move="L2">L2</button></td>
+        </tr>
+        <tr>
+          <td>F</td>
+          <td><button data-move="F">F</button></td>
+          <td><button data-move="F'">F'</button></td>
+          <td><button data-move="F2">F2</button></td>
+        </tr>
+        <tr>
+          <td>B</td>
+          <td><button data-move="B">B</button></td>
+          <td><button data-move="B'">B'</button></td>
+          <td><button data-move="B2">B2</button></td>
+        </tr>
+        <tr>
+          <td>E</td>
+          <td><button data-move="E">E</button></td>
+          <td><button data-move="E'">E'</button></td>
+          <td><button data-move="E2">E2</button></td>
+        </tr>
+        <tr>
+          <td>M</td>
+          <td><button data-move="M">M</button></td>
+          <td><button data-move="M'">M'</button></td>
+          <td><button data-move="M2">M2</button></td>
+        </tr>
+        <tr>
+          <td>S</td>
+          <td><button data-move="S">S</button></td>
+          <td><button data-move="S'">S'</button></td>
+          <td><button data-move="S2">S2</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="zettel-section">Aktionen</div>
+    <button class="action-btn" id="btn-scramble">
+      <svg viewBox="0 0 24 24">
+        <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04
+                 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41
+                 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+      </svg>
+      Mischen
+    </button>
+    <button class="action-btn" id="btn-solve">
+      <img src="Bilder/Rubik3x3x3.jpg" style="width:16px;height:16px;object-fit:cover;border-radius:2px;flex-shrink:0;" alt="">
+      Gelöst
+    </button>
+  </div>
+  <div class="zettel-resize"></div>
+</div>
+
+<!-- Ansicht-Zettel -->
+<div class="zettel" id="zettel-ansicht">
+  <div class="zettel-grip">
+    <button class="zettel-close" title="Schließen">✕</button>
+    Ansicht
+    <svg viewBox="0 0 24 24">
+      <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11
+               11-7.5C21.27 7.61 17 4.5 12 4.5zm0 12.5c-2.76 0-5-2.24-5-5s2.24-5
+               5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3
+               3-1.34 3-3-1.34-3-3-3z"/>
+    </svg>
+  </div>
+  <div class="zettel-body">
+    <button class="action-btn" id="btn-ans-mitten">Mitten: sichtbar</button>
+    <button class="action-btn" id="btn-ans-geloest">Gelöste: sichtbar</button>
+    <button class="action-btn" id="btn-ans-ungeloest">Ungelöste: sichtbar</button>
+    <button class="action-btn" id="btn-ans-alle">Zeige alle</button>
+  </div>
+  <div class="zettel-resize"></div>
+</div>
+
+<!-- Übungen-Zettel -->
+<div class="zettel" id="zettel-uebung">
+  <div class="zettel-grip">
+    <button class="zettel-close" title="Schließen">✕</button>
+    Übungen
+    <svg viewBox="0 0 24 24">
+      <path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>
+    </svg>
+  </div>
+  <div class="zettel-body">
+    <button class="action-btn" id="btn-mischen-uebung">↺ Mischen</button>
+    <div class="zettel-section">R1 &ndash; Grüne Seite</div>
+    <button class="action-btn uebung-btn" data-uebung="R1g">R1g &ndash; Grün ohne Gelb</button>
+    <div class="zettel-section">R2 &ndash; Gelbe Ecken</div>
+    <button class="action-btn uebung-btn" data-uebung="R2o">R2o &ndash; Ecken orientieren</button>
+    <button class="action-btn uebung-btn" data-uebung="R2p">R2p &ndash; Ecken permutieren</button>
+    <div class="zettel-section">R3 &ndash; M+U Kanten</div>
+    <button class="action-btn uebung-btn" data-uebung="R3a">R3a &ndash; Kanten aus M+U</button>
+    <button class="action-btn uebung-btn" data-uebung="R3b">R3b &ndash; Kanten+Mitten</button>
+    <button class="action-btn uebung-btn" data-uebung="R3c6">R3c6 &ndash; 6 Kanten falsch</button>
+    <button class="action-btn uebung-btn" data-uebung="R3c5">R3c5 &ndash; 5 Kanten falsch</button>
+    <button class="action-btn uebung-btn" data-uebung="R3c4">R3c4 &ndash; 4 Kanten falsch</button>
+    <button class="action-btn uebung-btn" data-uebung="R3c3">R3c3 &ndash; 3 Kanten falsch</button>
+  </div>
+  <div class="zettel-resize"></div>
+</div>
+
+<!-- Erläuterungs-Zettel -->
+<div class="zettel" id="zettel-help">
+  <div class="zettel-grip">
+    <button class="zettel-close" title="Schließen">✕</button>
+    Erläuterungen
+    <svg viewBox="0 0 24 24">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1
+               17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5
+               c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41
+               0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4
+               c0 .88-.36 1.68-.93 2.25z"/>
+    </svg>
+  </div>
+  <div class="zettel-body">
+
+    <div class="help-section">Steuerung</div>
+    <dl class="help-dl">
+      <dt>Maus ziehen</dt>     <dd>Würfel drehen</dd>
+      <dt>Klick Kachel</dt>    <dd>Farbwähler öffnen</dd>
+      <dt>Mitte 1×</dt>        <dd>Mittelpunkte ein-/ausblenden</dd>
+      <dt>Mitte 2×</dt>        <dd>Würfel mischen</dd>
+      <dt>Mitte 3×</dt>        <dd>Gelöst einfärben</dd>
+      <dt>Strg+Z</dt>          <dd>Rückgängig</dd>
+      <dt>Strg+Y</dt>          <dd>Wiederholen</dd>
+    </dl>
+
+    <div class="help-section">Rubik-Notation</div>
+    <dl class="help-dl">
+      <dt>U D R L F B</dt>     <dd>Schicht 90° im Uhrzeigersinn</dd>
+      <dt>X'</dt>              <dd>90° gegen Uhrzeigersinn</dd>
+      <dt>X2</dt>              <dd>180°-Drehung</dd>
+    </dl>
+    <dl class="help-dl" style="margin-top:4px">
+      <dt>U</dt>  <dd>Up – obere Schicht</dd>
+      <dt>D</dt>  <dd>Down – untere Schicht</dd>
+      <dt>R</dt>  <dd>Right – rechte Schicht (+X)</dd>
+      <dt>L</dt>  <dd>Left – linke Schicht (−X)</dd>
+      <dt>F</dt>  <dd>Front – vordere Schicht (+Z)</dd>
+      <dt>B</dt>  <dd>Back – hintere Schicht (−Z)</dd>
+    </dl>
+
+    <div class="help-section">Farbzuordnung</div>
+    <div class="color-legend">
+      <span><span class="color-swatch" style="background:#ffd000"></span>Gelb = oben</span>
+      <span><span class="color-swatch" style="background:#f0f0f0"></span>Weiß = unten</span>
+      <span><span class="color-swatch" style="background:#0044cc"></span>Blau = rechts</span>
+      <span><span class="color-swatch" style="background:#00aa44"></span>Grün = links</span>
+      <span><span class="color-swatch" style="background:#ff8800"></span>Orange = vorne</span>
+      <span><span class="color-swatch" style="background:#cc1111"></span>Rot = hinten</span>
+    </div>
+
+  </div>
+  <div class="zettel-resize"></div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three":         "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="wuerfel.js"></script>
+</body>
+</html>
