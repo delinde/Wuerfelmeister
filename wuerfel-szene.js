@@ -22,36 +22,22 @@ S.camQuat.copy(kamera.quaternion);
 
 // ── Kamera-Funktionen ──────────────────────────────────────
 export function kameraAktualisieren() {
-  if (S.kameraModus === 'kugel') {
-    const sinAz = Math.sin(S.azimuth),  cosAz = Math.cos(S.azimuth);
-    const sinEl = Math.sin(S.elevation), cosEl = Math.cos(S.elevation);
-    kamera.position.set(
-      S.camDist * sinAz * cosEl,
-      S.camDist * sinEl,
-      S.camDist * cosAz * cosEl
-    );
-    // Meridian-Tangente: immer ⊥ zur Blickrichtung → kein Pol-Problem
-    kamera.up.set(-sinAz * sinEl, cosEl, -cosAz * sinEl);
-    kamera.lookAt(0, 0, 0);
-    S.camQuat.copy(kamera.quaternion);   // für eventuelle Rückkehr in Frei-Modus
-  } else {
-    kamera.position.copy(new THREE.Vector3(0, 0, S.camDist).applyQuaternion(S.camQuat));
-    kamera.quaternion.copy(S.camQuat);
-  }
+  const sinAz = Math.sin(S.azimuth),  cosAz = Math.cos(S.azimuth);
+  const sinEl = Math.sin(S.elevation), cosEl = Math.cos(S.elevation);
+  kamera.position.set(
+    S.camDist * sinAz * cosEl,
+    S.camDist * sinEl,
+    S.camDist * cosAz * cosEl
+  );
+  // Meridian-Tangente: immer ⊥ zur Blickrichtung → kein Pol-Problem
+  kamera.up.set(-sinAz * sinEl, cosEl, -cosAz * sinEl);
+  kamera.lookAt(0, 0, 0);
+  S.camQuat.copy(kamera.quaternion);
 }
 
 export function drehenDelta(dH, dV) {
-  if (S.kameraModus === 'kugel') {
-    S.azimuth  += Math.cos(S.elevation) < 0 ? -dH : dH;
-    S.elevation -= dV;
-  } else {
-    const auf    = new THREE.Vector3(0, 1, 0).applyQuaternion(S.camQuat);
-    const rechts = new THREE.Vector3(1, 0, 0).applyQuaternion(S.camQuat);
-    S.camQuat
-      .premultiply(new THREE.Quaternion().setFromAxisAngle(auf,    dH))
-      .premultiply(new THREE.Quaternion().setFromAxisAngle(rechts, dV))
-      .normalize();
-  }
+  S.azimuth  += Math.cos(S.elevation) < 0 ? -dH : dH;
+  S.elevation -= dV;
   kameraAktualisieren();
 }
 

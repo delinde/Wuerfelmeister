@@ -15,8 +15,7 @@ export const S = {
   // ── Animation ───────────────────────────────────────────
   animationLaeuft: false,
 
-  // ── Kamera-Modus ────────────────────────────────────────
-  kameraModus: 'kugel',   // 'kugel' = Kugelkoordinaten (kein Rollen) | 'frei' = Quaternion
+  // ── Kamera (Kugelkoordinaten) ────────────────────────────
   azimuth:   0,           // wird in wuerfel-szene.js aus Startposition berechnet
   elevation: 0,           // wird in wuerfel-szene.js aus Startposition berechnet
 

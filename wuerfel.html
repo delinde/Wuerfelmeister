@@ -84,10 +84,7 @@
       transition: background .15s, border-color .15s; outline: none;
     }
     .icon-btn:hover { background: rgba(255,255,255,.20); border-color: rgba(255,255,255,.35); }
-    .icon-btn.aktiv { background: rgba(80,140,255,.28); border-color: rgba(80,140,255,.60); }
-    .icon-btn.aktiv svg { fill: #a0c8ff; }
-    #icon-kamera:not(.aktiv) svg { fill: rgba(184,200,232,.28); }
-    #img-geloest-icon:hover { opacity: 1; border-color: rgba(255,255,255,.45); }
+#img-geloest-icon:hover { opacity: 1; border-color: rgba(255,255,255,.45); }
     .icon-btn svg { width: 20px; height: 20px; fill: #b8c8e8; }
 
     /* ── Zettel (schwebende Panels) ── */
@@ -210,7 +207,7 @@
 <body>
 
 <div id="picker"></div>
-<div id="title">Würfelmeister<span id="wm-version">v 0.3.17 &nbsp;·&nbsp; Würfelchen &nbsp;·&nbsp; 2026-06-06 20:02</span></div>
+<div id="title">Würfelmeister<span id="wm-version">v 0.3.18 &nbsp;·&nbsp; Würfelchen &nbsp;·&nbsp; 2026-06-06 20:24</span></div>
 <div id="mitten-toast"></div>
 <div id="zugfolge"></div>
 <div id="tip">Drehen: Maus &nbsp;·&nbsp; Kachel: Klick &nbsp;·&nbsp; Mitte 1×=Stufe &nbsp;·&nbsp; 2×=Mischen &nbsp;·&nbsp; 3×=Gelöst</div>
@@ -251,23 +248,7 @@
     </svg>
   </button>
   <button class="icon-btn" id="icon-uebung" title="Übungen" style="font-size:17px;font-weight:700;letter-spacing:0;color:#b8c8e8;">Ü</button>
-  <button class="icon-btn aktiv" id="icon-kamera" title="Kugelkoordinaten – kein Rollen">
-    <svg viewBox="0 0 24 24">
-      <path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12
-               S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56
-               1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82
-               c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2
-               h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95
-               c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.91-4.33-3.56zm2.95-8H5.08
-               c.96-1.65 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96
-               c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zm2.34-5.96
-               H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2
-               0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95
-               c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2
-               0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"/>
-    </svg>
-  </button>
-  <button class="icon-btn" id="icon-help" title="Erläuterungen">
+<button class="icon-btn" id="icon-help" title="Erläuterungen">
     <svg viewBox="0 0 24 24">
       <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1
                17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5
