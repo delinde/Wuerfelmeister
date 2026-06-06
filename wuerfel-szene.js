@@ -42,7 +42,7 @@ export function kameraAktualisieren() {
 
 export function drehenDelta(dH, dV) {
   if (S.kameraModus === 'kugel') {
-    S.azimuth  += dH;
+    S.azimuth  += Math.cos(S.elevation) < 0 ? -dH : dH;
     S.elevation -= dV;
   } else {
     const auf    = new THREE.Vector3(0, 1, 0).applyQuaternion(S.camQuat);
