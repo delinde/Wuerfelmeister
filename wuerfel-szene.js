@@ -14,23 +14,42 @@ zeichner.setSize(innerWidth, innerHeight);
 zeichner.setClearColor(0x0d0d1a);
 document.body.appendChild(zeichner.domElement);
 
-// Kamera-Quaternion aus initialer Kameraposition ableiten
-S.camDist = kamera.position.length();
+// Kamera-Quaternion und Kugelkoordinaten aus Startposition ableiten
+S.camDist   = kamera.position.length();
+S.elevation = Math.asin(kamera.position.y / S.camDist);
+S.azimuth   = Math.atan2(kamera.position.x, kamera.position.z);
 S.camQuat.copy(kamera.quaternion);
 
 // ── Kamera-Funktionen ──────────────────────────────────────
 export function kameraAktualisieren() {
-  kamera.position.copy(new THREE.Vector3(0, 0, S.camDist).applyQuaternion(S.camQuat));
-  kamera.quaternion.copy(S.camQuat);
+  if (S.kameraModus === 'kugel') {
+    const cosEl = Math.cos(S.elevation);
+    kamera.position.set(
+      S.camDist * Math.sin(S.azimuth) * cosEl,
+      S.camDist * Math.sin(S.elevation),
+      S.camDist * Math.cos(S.azimuth) * cosEl
+    );
+    kamera.up.set(0, 1, 0);
+    kamera.lookAt(0, 0, 0);
+    S.camQuat.copy(kamera.quaternion);   // für eventuelle Rückkehr in Frei-Modus
+  } else {
+    kamera.position.copy(new THREE.Vector3(0, 0, S.camDist).applyQuaternion(S.camQuat));
+    kamera.quaternion.copy(S.camQuat);
+  }
 }
 
 export function drehenDelta(dH, dV) {
-  const auf    = new THREE.Vector3(0, 1, 0).applyQuaternion(S.camQuat);
-  const rechts = new THREE.Vector3(1, 0, 0).applyQuaternion(S.camQuat);
-  S.camQuat
-    .premultiply(new THREE.Quaternion().setFromAxisAngle(auf,    dH))
-    .premultiply(new THREE.Quaternion().setFromAxisAngle(rechts, dV))
-    .normalize();
+  if (S.kameraModus === 'kugel') {
+    S.azimuth  += dH;
+    S.elevation = Math.max(-1.4835, Math.min(1.4835, S.elevation - dV));
+  } else {
+    const auf    = new THREE.Vector3(0, 1, 0).applyQuaternion(S.camQuat);
+    const rechts = new THREE.Vector3(1, 0, 0).applyQuaternion(S.camQuat);
+    S.camQuat
+      .premultiply(new THREE.Quaternion().setFromAxisAngle(auf,    dH))
+      .premultiply(new THREE.Quaternion().setFromAxisAngle(rechts, dV))
+      .normalize();
+  }
   kameraAktualisieren();
 }
 

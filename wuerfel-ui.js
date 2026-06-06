@@ -337,3 +337,21 @@ document.getElementById('btn-ans-alle').addEventListener('click', () => {
 // ── Schieberegler ─────────────────────────────────────────
 document.getElementById('slider-durchsicht').addEventListener('input', e => { S.durchsicht     = e.target.value / 100; });
 document.getElementById('slider-gitter').addEventListener('input',     e => { S.gitterDeckkraft = e.target.value / 100; });
+
+// ── Kamera-Modus-Umschalter ───────────────────────────────
+const ikonKamera = document.getElementById('icon-kamera');
+ikonKamera.addEventListener('click', () => {
+  if (S.kameraModus === 'kugel') {
+    S.kameraModus = 'frei';
+    ikonKamera.classList.remove('aktiv');
+    ikonKamera.title = 'Freie Drehung – kann rollen';
+  } else {
+    S.kameraModus = 'kugel';
+    // Kugelkoordinaten aus aktueller Kameraposition ableiten
+    S.elevation = Math.asin(kamera.position.y / S.camDist);
+    S.azimuth   = Math.atan2(kamera.position.x, kamera.position.z);
+    ikonKamera.classList.add('aktiv');
+    ikonKamera.title = 'Kugelkoordinaten – kein Rollen';
+  }
+  kameraAktualisieren();
+});
