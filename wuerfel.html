@@ -41,8 +41,21 @@
     #title {
       position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
       color: rgba(255,255,255,.18); font-size: 13px; letter-spacing: .15em;
-      text-transform: uppercase; pointer-events: none;
+      text-transform: uppercase; pointer-events: none; text-align: center;
     }
+    #wm-version {
+      display: block; font-size: 9px; letter-spacing: .06em; text-transform: none;
+      color: rgba(255,255,255,.10); margin-top: 3px;
+    }
+    #mitten-toast {
+      position: fixed; top: 58px; left: 50%; transform: translateX(-50%);
+      z-index: 99;
+      color: rgba(255,255,255,.88); font-size: 12px; letter-spacing: .06em;
+      pointer-events: none; opacity: 0; transition: opacity .3s;
+      background: rgba(20,30,60,.82); padding: 5px 16px; border-radius: 20px;
+      border: 1px solid rgba(100,150,255,.25); white-space: nowrap;
+    }
+    #mitten-toast.show { opacity: 1; }
 
     /* ── Undo / Redo ── */
     #hist {
@@ -121,10 +134,10 @@
     }
 
     /* ── Positionierung der Zettel ── */
-    #zettel-tools   { top: 100px; right: 16px; width: 218px; }
-    #zettel-help    { top: 110px; right: 28px; width: 270px; }
-    #zettel-uebung  { top: 105px; right: 20px; width: 232px; }
-    #zettel-ansicht { top: 108px; right: 18px; width: 210px; }
+    #zettel-tools   { top: 100px; right: 58px; width: 218px; }
+    #zettel-help    { top: 110px; right: 58px; width: 270px; }
+    #zettel-uebung  { top: 105px; right: 66px; width: 232px; }
+    #zettel-ansicht { top: 108px; right: 58px; width: 210px; }
 
     /* ── Werkzeuge-Inhalt ── */
     .zettel-section {
@@ -194,9 +207,10 @@
 <body>
 
 <div id="picker"></div>
-<div id="title">Würfelmeister</div>
+<div id="title">Würfelmeister<span id="wm-version">v 0.3.14 &nbsp;·&nbsp; Würfelchen &nbsp;·&nbsp; 2026-06-06 17:39</span></div>
+<div id="mitten-toast"></div>
 <div id="zugfolge"></div>
-<div id="tip">Drehen: Maus &nbsp;·&nbsp; Kachel: Klick &nbsp;·&nbsp; Mitte 1×=Ein/Aus &nbsp;·&nbsp; 2×=Mischen &nbsp;·&nbsp; 3×=Gelöst</div>
+<div id="tip">Drehen: Maus &nbsp;·&nbsp; Kachel: Klick &nbsp;·&nbsp; Mitte 1×=Stufe &nbsp;·&nbsp; 2×=Mischen &nbsp;·&nbsp; 3×=Gelöst</div>
 
 <!-- Undo / Redo -->
 <div id="hist">
@@ -359,6 +373,20 @@
     <button class="action-btn" id="btn-ans-geloest">Gelöste: sichtbar</button>
     <button class="action-btn" id="btn-ans-ungeloest">Ungelöste: sichtbar</button>
     <button class="action-btn" id="btn-ans-alle">Zeige alle</button>
+    <div class="zettel-section" style="margin-top:10px">Durchsicht Rückseite</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 0 4px">
+      <span style="font-size:10px;color:rgba(160,185,230,.45);width:10px">0</span>
+      <input type="range" id="slider-durchsicht" min="0" max="100" value="70"
+             style="flex:1;accent-color:#6699cc;cursor:pointer">
+      <span style="font-size:10px;color:rgba(160,185,230,.45);width:10px">1</span>
+    </div>
+    <div class="zettel-section">Gitterlinien</div>
+    <div style="display:flex;align-items:center;gap:8px;padding:2px 0 4px">
+      <span style="font-size:10px;color:rgba(160,185,230,.45);width:10px">0</span>
+      <input type="range" id="slider-gitter" min="0" max="100" value="100"
+             style="flex:1;accent-color:#6699cc;cursor:pointer">
+      <span style="font-size:10px;color:rgba(160,185,230,.45);width:10px">1</span>
+    </div>
   </div>
   <div class="zettel-resize"></div>
 </div>
@@ -374,8 +402,9 @@
   </div>
   <div class="zettel-body">
     <button class="action-btn" id="btn-mischen-uebung">↺ Mischen</button>
-    <div class="zettel-section">R1 &ndash; Grüne Seite</div>
-    <button class="action-btn uebung-btn" data-uebung="R1g">R1g &ndash; Grün ohne Gelb</button>
+    <div class="zettel-section">R1 &ndash; Seitenblöcke</div>
+    <button class="action-btn uebung-btn" data-uebung="R1g">R1g &ndash; Grüner Block</button>
+    <button class="action-btn uebung-btn" data-uebung="R1gb">R1gb &ndash; Grüner + Blauer Block</button>
     <div class="zettel-section">R2 &ndash; Gelbe Ecken</div>
     <button class="action-btn uebung-btn" data-uebung="R2o">R2o &ndash; Ecken orientieren</button>
     <button class="action-btn uebung-btn" data-uebung="R2p">R2p &ndash; Ecken permutieren</button>
@@ -409,7 +438,7 @@
     <dl class="help-dl">
       <dt>Maus ziehen</dt>     <dd>Würfel drehen</dd>
       <dt>Klick Kachel</dt>    <dd>Farbwähler öffnen</dd>
-      <dt>Mitte 1×</dt>        <dd>Mittelpunkte ein-/ausblenden</dd>
+      <dt>Mitte 1×</dt>        <dd>Mittenpunkt-Stufe: sichtbar → Rand → verborgen → Kern</dd>
       <dt>Mitte 2×</dt>        <dd>Würfel mischen</dd>
       <dt>Mitte 3×</dt>        <dd>Gelöst einfärben</dd>
       <dt>Strg+Z</dt>          <dd>Rückgängig</dd>
